@@ -1,0 +1,12 @@
+[
+  {
+    "modid": "warpdmgtrainer",
+    "name": "Warp Damage Trainer",
+    "description": "Teste de resistência a dano configurável (Damage Tank Test) para treino de PvP. Modo local em single-player e modo monitor em servidores.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "authorList": ["Warp Damage Trainer"],
+    "credits": "Inspirado no conceito de Warp Damage.",
+    "useDependencyInformation": false
+  }
+]
