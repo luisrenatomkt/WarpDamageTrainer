@@ -1,0 +1,48 @@
+name: Build Warp Damage Trainer
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 8
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Instalar Gradle 2.14.1
+        run: |
+          wget -q https://services.gradle.org/distributions/gradle-2.14.1-bin.zip -O /tmp/gradle.zip
+          sudo unzip -q /tmp/gradle.zip -d /opt
+          echo "/opt/gradle-2.14.1/bin" >> "$GITHUB_PATH"
+
+      - name: Versões
+        run: |
+          java -version
+          gradle --version
+
+      - name: Compilar (setupCiWorkspace + build)
+        env:
+          GRADLE_OPTS: -Xmx3g -Dfile.encoding=UTF-8
+        run: gradle setupCiWorkspace build --no-daemon --stacktrace
+
+      - name: Localizar o .jar
+        run: |
+          ls -l build/libs/
+          test -f build/libs/warpdmgtrainer-1.0.0.jar
+
+      - name: Publicar o .jar como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: WarpDamageTrainer-1.0.0
+          path: build/libs/warpdmgtrainer-1.0.0.jar
+          if-no-files-found: error
