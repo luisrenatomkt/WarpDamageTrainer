@@ -3,6 +3,7 @@ package com.warpdmgtrainer;
 import com.warpdmgtrainer.command.TrainerCommand;
 import com.warpdmgtrainer.config.ConfigManager;
 import com.warpdmgtrainer.config.PersistenceManager;
+import com.warpdmgtrainer.core.ItemDropGuard;
 import com.warpdmgtrainer.core.ResistanceTestManager;
 import com.warpdmgtrainer.hud.TrainerHud;
 import net.minecraft.client.settings.KeyBinding;
@@ -23,7 +24,7 @@ import org.lwjgl.input.Keyboard;
 public class WarpDamageTrainer {
     public static final String MODID = "warpdmgtrainer";
     public static final String NAME = "Warp Damage Trainer";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
     public static final Logger LOGGER = LogManager.getLogger(MODID);
 
     public static final KeyBinding KEY_OPEN =
@@ -41,7 +42,8 @@ public class WarpDamageTrainer {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         PersistenceManager persistence = new PersistenceManager(config.getConfiguration());
-        ResistanceTestManager manager = new ResistanceTestManager(config, persistence);
+        ItemDropGuard itemGuard = new ItemDropGuard();
+        ResistanceTestManager manager = new ResistanceTestManager(config, persistence, itemGuard);
 
         ClientRegistry.registerKeyBinding(KEY_OPEN);
         ClientRegistry.registerKeyBinding(KEY_HUD);
@@ -49,6 +51,7 @@ public class WarpDamageTrainer {
         ClientEvents events = new ClientEvents(manager, config);
         FMLCommonHandler.instance().bus().register(events);
         MinecraftForge.EVENT_BUS.register(new TrainerHud(manager, config));
+        MinecraftForge.EVENT_BUS.register(itemGuard);
         ClientCommandHandler.instance.registerCommand(new TrainerCommand(manager, config, events));
 
         LOGGER.info("{} {} carregado.", NAME, VERSION);

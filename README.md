@@ -5,7 +5,7 @@ Mod **cliente** para **Minecraft 1.8.9 + Forge 11.15.1.2318** que cria um teste 
 | Item | Valor |
 |---|---|
 | Nome / ID | Warp Damage Trainer / `warpdmgtrainer` |
-| Versão | 1.0.0 |
+| Versão | 1.1.0 |
 | Minecraft / Loader | 1.8.9 / Forge `1.8.9-11.15.1.2318-1.8.9` |
 | Build | ForgeGradle 2.1-SNAPSHOT, Gradle **2.14.1**, Java **8**, mappings `stable_22` |
 
@@ -14,6 +14,16 @@ Mod **cliente** para **Minecraft 1.8.9 + Forge 11.15.1.2318** que cria um teste 
 * **A compilação com Forge NÃO foi executada** no ambiente em que este projeto foi escrito (sem Gradle, sem acesso à rede, sem os JARs do Minecraft/Forge). O primeiro build real será o do GitHub Actions. É possível que apareça algum erro de compilação ou de resolução de dependência na primeira execução; veja "Solução de problemas".
 * **Testado de verdade (28/28 OK):** a lógica pura, sem Minecraft — tabela de dano e delay, temporizador, contagem de golpes, dano configurado × registrado, recorde, serialização do histórico. Rode com `sh tools/run-logic-tests.sh`.
 * **Não testado dentro do jogo:** interface, HUD, aplicação do dano, comando e teclas. Nada disso foi executado no Minecraft.
+
+## Remoção automática de itens dropados (novo na 1.1.0)
+
+Enquanto um teste está ativo (rodando ou pausado) **no modo LOCAL (single-player)** e o jogador está vivo, todo item que você dropar (Q, Ctrl+Q, arrastar para fora do inventário) desaparece na hora.
+
+* **Ligar:** automático ao clicar em **INICIAR TESTE** (ou `/warpdmg iniciar`). Não há botão separado.
+* **Desligar:** automático ao **morrer** (o evento de morte desarma antes dos drops da morte, então o que cair na morte fica no chão), ao encerrar o teste ou ao sair do mundo. Ao renascer, continua desligado até você iniciar o teste de novo.
+* **Como funciona:** o item é cancelado em `EntityJoinWorldEvent` no servidor integrado, antes de existir como entidade. Não há item no chão, acúmulo de entidades, duplicação nem mexida no inventário. Só itens que nascem na posição exata de drop do jogador são removidos; drops de blocos e mobs não são afetados.
+* **Multiplayer:** não funciona. O servidor tem a autoridade sobre as entidades de item, e o mod é cliente. Em servidores o modo MONITOR não remove nada. Em partida aberta para LAN, só os seus drops são afetados.
+* **HUD:** mostra "Itens: remoção ATIVA (N)" durante o teste.
 
 ## Como funciona
 
@@ -48,9 +58,9 @@ Mod **cliente** para **Minecraft 1.8.9 + Forge 11.15.1.2318** que cria um teste 
    git push -u origin main
    ```
 3. O push na branch `main` (ou `master`) dispara o workflow `.github/workflows/build.yml`. Também dá para rodar manualmente: aba **Actions → Build Warp Damage Trainer → Run workflow**.
-4. Ao terminar, abra a execução e baixe o artefato **WarpDamageTrainer-1.0.0** (um .zip contendo o `.jar`).
+4. Ao terminar, abra a execução e baixe o artefato **WarpDamageTrainer-1.1.0** (um .zip contendo o `.jar`).
 
-**Caminho do .jar:** `build/libs/warpdmgtrainer-1.0.0.jar` (no runner e no build local). No GitHub: página da execução → seção *Artifacts*.
+**Caminho do .jar:** `build/libs/warpdmgtrainer-1.1.0.jar` (no runner e no build local). No GitHub: página da execução → seção *Artifacts*.
 
 O workflow usa Java 8 (Temurin), baixa o **Gradle 2.14.1** (o Gradle do runner é novo demais para ForgeGradle 2.x), roda `gradle setupCiWorkspace build` e falha se a compilação falhar ou se o `.jar` não existir.
 
@@ -61,7 +71,7 @@ O workflow usa Java 8 (Temurin), baixa o **Gradle 2.14.1** (o Gradle do runner �
 ## Instalar no Minecraft
 
 1. Instale o Minecraft Forge **1.8.9 – 11.15.1.2318** (instalador oficial) e abra o jogo uma vez com o perfil Forge.
-2. Copie `warpdmgtrainer-1.0.0.jar` para `.minecraft/mods/`.
+2. Copie `warpdmgtrainer-1.1.0.jar` para `.minecraft/mods/`.
 3. Abra o Minecraft com o perfil Forge 1.8.9. O mod é só de cliente e não precisa estar no servidor.
 
 ## Estrutura

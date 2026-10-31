@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")/.."
 OUT=$(mktemp -d)
 SRC=src/main/java/com/warpdmgtrainer
-FILES="$SRC/model/*.java $SRC/core/PrecisionTimer.java $SRC/core/SessionResult.java $SRC/core/StatsCollector.java $SRC/util/TimeFormat.java tools/LogicSelfTest.java"
+FILES="$SRC/model/*.java $SRC/core/PrecisionTimer.java $SRC/core/SessionResult.java $SRC/core/StatsCollector.java $SRC/core/DropGuardState.java $SRC/util/TimeFormat.java tools/LogicSelfTest.java"
 if command -v javac >/dev/null 2>&1; then
   javac -encoding UTF-8 --release 8 -d "$OUT" $FILES
 else

@@ -31,7 +31,7 @@ public class TrainerHud extends Gui {
         FontRenderer fr = mc.fontRendererObj;
         int x = 4, y = 4, w = 128;
         boolean paused = manager.getState() == TestState.PAUSED;
-        drawRect(x - 2, y - 2, x + w, y + 46, 0x90000000);
+        drawRect(x - 2, y - 2, x + w, y + 57, 0x90000000);
         fr.drawStringWithShadow(EnumChatFormatting.RED + "WARP DAMAGE" + EnumChatFormatting.GRAY
                 + (paused ? " [PAUSADO]" : ""), x, y, 0xFFFFFF);
         fr.drawStringWithShadow("Tempo: " + EnumChatFormatting.WHITE + TimeFormat.duration(manager.getElapsedMs()),
@@ -47,6 +47,13 @@ public class TrainerHud extends Gui {
             drawRect(bx, by, bx + (int) (bw * prog), by + 5, 0xFFFF5555);
         } else {
             fr.drawStringWithShadow("Modo monitor", x, y + 35, 0xFFFF55);
+        }
+
+        if (manager.getItemGuard().isArmed()) {
+            fr.drawStringWithShadow("Itens: " + EnumChatFormatting.GREEN + "remoção ATIVA"
+                    + EnumChatFormatting.GRAY + " (" + manager.getItemGuard().getRemovedCount() + ")", x, y + 46, 0xAAAAAA);
+        } else {
+            fr.drawStringWithShadow("Itens: " + EnumChatFormatting.GRAY + "normal", x, y + 46, 0xAAAAAA);
         }
     }
 }

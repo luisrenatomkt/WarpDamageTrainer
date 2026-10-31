@@ -1,6 +1,7 @@
 import com.warpdmgtrainer.core.*;
 import com.warpdmgtrainer.model.*;
 import java.util.*;
+import com.warpdmgtrainer.core.DropGuardState;
 
 /** Testes da lógica pura (sem Minecraft). Execução: veja README / tools/run-logic-tests.sh */
 public class LogicSelfTest {
@@ -102,7 +103,109 @@ public class LogicSelfTest {
         check("TimeFormat 65250ms = 01:05,250", com.warpdmgtrainer.util.TimeFormat.duration(65250).equals("01:05,250"));
         check("TimeFormat num(2.5) = 2,5", com.warpdmgtrainer.util.TimeFormat.num(2.5).equals("2,5"));
 
+ 		dropGuardScenarios();
+
         System.out.println("\nResumo: " + pass + " OK, " + fail + " falha(s)");
         System.exit(fail == 0 ? 0 : 1);
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Simulação dos cenários A-F da remoção de itens, sobre a regra real (DropGuardState).
+    // Isto NÃO roda o Minecraft: o "mundo" abaixo imita a ordem de eventos do jogo.
+    // ---------------------------------------------------------------------------------------------
+    static class FakePlayer { UUID id = UUID.randomUUID(); double x = 10.5, y = 64, z = -3.25; float eye = 1.62f; float health = 20f; boolean dead; }
+
+    static class FakeWorld {
+        final DropGuardState guard; final FakePlayer p; final List<String> ground = new ArrayList<String>();
+        FakeWorld(DropGuardState g, FakePlayer p) { this.guard = g; this.p = p; }
+
+        /** Drop do jogador (Q, inventário, Ctrl+Q): nasce na posição exata do jogador. */
+        void playerDrop(String item) {
+            double sy = p.y - 0.30000001192092896D + (double) p.eye;
+            if (!guard.shouldRemove(p.id, p.health, p.dead, p.x, sy, p.z, p.x, p.y, p.z, p.eye)) ground.add(item);
+        }
+        /** Item de bloco/mob perto do jogador, posição aleatória. */
+        void blockDrop(String item, double dx, double dy, double dz) {
+            if (!guard.shouldRemove(p.id, p.health, p.dead, p.x + dx, p.y + dy, p.z + dz, p.x, p.y, p.z, p.eye)) ground.add(item);
+        }
+        /** Morte: LivingDeathEvent dispara ANTES dos drops da morte. */
+        void die(String... inventory) {
+            guard.onEntityDeath(p.id);
+            p.health = 0f; p.dead = true;
+            for (String it : inventory) playerDrop(it);
+        }
+        void respawn() { p.health = 20f; p.dead = false; }
+    }
+
+    static void dropGuardScenarios() {
+        DropGuardState g = new DropGuardState();
+        FakePlayer pl = new FakePlayer();
+        FakeWorld w = new FakeWorld(g, pl);
+
+        check("Estado inicial: remoção desarmada", !g.isArmed());
+        w.playerDrop("espada_antes_de_iniciar");
+        check("Antes de iniciar o teste, drops permanecem no chão", w.ground.size() == 1);
+        w.ground.clear();
+
+        // Teste A
+        g.arm(pl.id);
+        w.playerDrop("espada");
+        check("Teste A: espada dropada com o mod ativo desaparece", w.ground.isEmpty() && g.getRemovedCount() == 1);
+
+        // Teste B
+        String[] itens = {"espada_diamante","armadura","picareta","bloco_pedra","maca","pocao","arco","flecha"};
+        for (String it : itens) w.playerDrop(it);
+        check("Teste B: 8 itens dropados, todos desaparecem (nenhuma entidade no chão)", w.ground.isEmpty());
+        check("Teste B: contador = 9 removidos", g.getRemovedCount() == 9);
+
+        // Não remover o que não é drop do jogador
+        w.blockDrop("drop_de_bloco", 0.3, 0.4, -0.2);
+        w.blockDrop("drop_de_mob", -0.6, 0.0, 0.9);
+        check("Itens de blocos/mobs próximos NÃO são removidos", w.ground.size() == 2);
+        w.ground.clear();
+
+        // Outro jogador (LAN/multiplayer) nunca é afetado
+        FakePlayer outro = new FakePlayer();
+        outro.x = pl.x; outro.y = pl.y; outro.z = pl.z;
+        FakeWorld w2 = new FakeWorld(g, outro);
+        w2.playerDrop("item_de_outro_jogador");
+        check("Drop de outro jogador não é removido", w2.ground.size() == 1);
+
+        // Teste C: morrer durante o teste -> desarma imediatamente, antes dos drops da morte
+        w.die("espada_da_morte", "armadura_da_morte");
+        check("Teste C: morte desarma a remoção imediatamente", !g.isArmed());
+        check("Teste C: itens dropados NA morte permanecem no chão", w.ground.size() == 2);
+        w.ground.clear();
+
+        // Teste D
+        w.playerDrop("espada_apos_morte");
+        check("Teste D: após morrer, espada dropada permanece no chão", w.ground.size() == 1);
+        w.ground.clear();
+
+        // Teste E
+        w.respawn();
+        w.playerDrop("espada_apos_respawn");
+        check("Teste E: após renascer, remoção continua desligada", !g.isArmed() && w.ground.size() == 1);
+        w.ground.clear();
+
+        // Teste F
+        g.arm(pl.id);
+        w.playerDrop("espada_teste2");
+        check("Teste F: novo início do teste religa a remoção", g.isArmed() && w.ground.isEmpty());
+        check("Teste F: contador zerado ao armar e agora = 1", g.getRemovedCount() == 1);
+
+        // Fim manual e interrupção desarmam
+        g.disarm();
+        w.playerDrop("espada_apos_encerrar");
+        check("Encerrar o teste desarma e drops voltam ao normal", w.ground.size() == 1);
+        w.ground.clear();
+
+        // Segurança: armado mas jogador já com vida 0 (ex.: morte ainda não notificada) não remove
+        g.arm(pl.id);
+        pl.health = 0f;
+        w.playerDrop("drop_com_vida_zero");
+        check("Jogador com vida 0 nunca tem drop removido (mesmo armado)", w.ground.size() == 1);
+        pl.health = 20f;
+        g.disarm();
     }
 }

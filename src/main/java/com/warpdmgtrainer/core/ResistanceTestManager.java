@@ -25,6 +25,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class ResistanceTestManager {
     private final ConfigManager config;
     private final PersistenceManager persistence;
+    private final ItemDropGuard itemGuard;
     private final StatsCollector stats = new StatsCollector();
     private final PrecisionTimer timer = new PrecisionTimer();
     private final ConcurrentLinkedQueue<HitResult> results = new ConcurrentLinkedQueue<HitResult>();
@@ -38,9 +39,10 @@ public class ResistanceTestManager {
     private String statusMessage = "";
     private SessionResult pendingResults;
 
-    public ResistanceTestManager(ConfigManager config, PersistenceManager persistence) {
+    public ResistanceTestManager(ConfigManager config, PersistenceManager persistence, ItemDropGuard itemGuard) {
         this.config = config;
         this.persistence = persistence;
+        this.itemGuard = itemGuard;
         persistence.loadInto(stats);
     }
 
@@ -68,9 +70,13 @@ public class ResistanceTestManager {
         lastHealth = mc.thePlayer.getHealth() + mc.thePlayer.getAbsorptionAmount();
         state = TestState.RUNNING;
         if (applier.appliesDamage()) {
+            itemGuard.arm(mc.thePlayer.getUniqueID());
             notifyPlayer(EnumChatFormatting.GREEN, "Teste iniciado: " + config.getDamageLevel().getDescription()
                     + " a cada " + delay.getDescription() + ".");
+            notifyPlayer(EnumChatFormatting.YELLOW, "Remoção automática de itens dropados: ATIVA. "
+                    + "Ela desliga sozinha quando você morrer ou o teste terminar.");
         } else {
+            itemGuard.disarm();
             notifyPlayer(EnumChatFormatting.YELLOW, "Servidor sem suporte: modo MONITOR. Nenhum dano será aplicado; "
                     + "apenas o dano real recebido será registrado.");
         }
@@ -179,6 +185,7 @@ public class ResistanceTestManager {
     }
 
     private void finish(EndReason reason) {
+        itemGuard.disarm(); // drops voltam ao normal imediatamente
         long ms = elapsedNanos / 1000000L;
         SessionResult r = stats.finish(reason, ms, timer.getSkipped());
         persistence.save(stats);
@@ -187,7 +194,8 @@ public class ResistanceTestManager {
         results.clear();
         notifyPlayer(reason == EndReason.DEATH ? EnumChatFormatting.RED : EnumChatFormatting.AQUA,
                 "Teste finalizado (" + reason.getLabel() + "). Tempo: " + TimeFormat.duration(ms)
-                        + " | Golpes recebidos: " + r.hitsReceived);
+                        + " | Golpes recebidos: " + r.hitsReceived
+                        + " | Remoção de itens desativada.");
     }
 
     /** No single-player, qualquer tela que pausa o jogo também congela o relógio do teste. */
@@ -226,6 +234,7 @@ public class ResistanceTestManager {
     public String getStatusMessage() { return statusMessage; }
     public long getElapsedMs() { return elapsedNanos / 1000000L; }
     public StatsCollector getStats() { return stats; }
+    public ItemDropGuard getItemGuard() { return itemGuard; }
     public DamageLevel getDamageLevel() { return config.getDamageLevel(); }
     public DelayOption getDelayOption() { return config.getDelayOption(); }
 
