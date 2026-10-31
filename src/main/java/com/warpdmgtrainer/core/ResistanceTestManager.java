@@ -37,7 +37,6 @@ public class ResistanceTestManager {
     private long elapsedNanos;
     private float lastHealth;
     private String statusMessage = "";
-    private SessionResult pendingResults;
 
     public ResistanceTestManager(ConfigManager config, PersistenceManager persistence, ItemDropGuard itemGuard) {
         this.config = config;
@@ -61,7 +60,6 @@ public class ResistanceTestManager {
         applier = DamageApplierFactory.select(mc);
         sessionId++;
         results.clear();
-        pendingResults = null;
         DelayOption delay = config.getDelayOption();
         stats.begin(config.getDamageLevel(), delay, applier.getModeCode());
         timer.reset(delay.getNanos());
@@ -114,7 +112,6 @@ public class ResistanceTestManager {
         stats.resetAll();
         persistence.save(stats);
         state = TestState.IDLE;
-        pendingResults = null;
         notifyPlayer(EnumChatFormatting.GREEN, "Estatísticas resetadas.");
     }
 
@@ -190,12 +187,59 @@ public class ResistanceTestManager {
         SessionResult r = stats.finish(reason, ms, timer.getSkipped());
         persistence.save(stats);
         state = TestState.FINISHED;
-        pendingResults = reason == EndReason.INTERRUPTED ? null : r;
         results.clear();
-        notifyPlayer(reason == EndReason.DEATH ? EnumChatFormatting.RED : EnumChatFormatting.AQUA,
-                "Teste finalizado (" + reason.getLabel() + "). Tempo: " + TimeFormat.duration(ms)
-                        + " | Golpes recebidos: " + r.hitsReceived
-                        + " | Remoção de itens desativada.");
+        statusMessage = "Teste finalizado (" + reason.getLabel() + ").";
+        postResultsToChat(r);
+    }
+
+    /** Resultados do teste no chat (substitui a antiga tela de resultados). */
+    private void postResultsToChat(SessionResult r) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc == null || mc.thePlayer == null) return; // mundo fechado: nada a exibir
+        boolean local = r.isLocalMode();
+        EnumChatFormatting g = EnumChatFormatting.GRAY;
+        EnumChatFormatting w = EnumChatFormatting.WHITE;
+
+        chat(EnumChatFormatting.GOLD + "" + EnumChatFormatting.BOLD + "===== RESULTADOS DO TESTE =====");
+        chat(g + "Início: " + w + TimeFormat.dateTime(r.startEpochMs));
+        chat(g + "Duração (sobrevivência): " + EnumChatFormatting.GREEN + TimeFormat.duration(r.durationMs));
+        chat(g + "Motivo do encerramento: " + (r.reason == EndReason.DEATH ? EnumChatFormatting.RED : w)
+                + r.reason.getLabel());
+        chat(g + "Modo: " + w + (local ? "LOCAL (servidor integrado)" : "MONITOR (somente leitura)"));
+        if (local) {
+            chat(g + "Dano configurado: " + w + r.level.getDescription()
+                    + g + " | Delay: " + w + r.delay.getDescription());
+            chat(g + "Tentativas de golpe: " + w + r.attempts);
+        }
+        chat(g + "Golpes recebidos (dano real): " + w + r.hitsReceived);
+        if (local) {
+            chat(g + "Golpes sem dano / bloqueados: " + w + r.blockedHits
+                    + g + " | Parciais (invulnerabilidade): " + w + r.partialHits);
+            chat(g + "Dano total configurado: " + w + TimeFormat.num(r.requestedDamage) + " pts");
+        }
+        chat(g + "Dano efetivamente registrado: " + w + TimeFormat.num(r.registeredDamage) + " pts");
+        if (local) chat(g + "Intervalos perdidos por lag: " + w + r.skippedIntervals);
+        chat(g + "Melhor tempo da sessão: " + w + TimeFormat.duration(stats.getSessionBestMs())
+                + g + " | Recorde salvo: " + w + TimeFormat.duration(stats.getAllTimeBestMs()));
+
+        if (local && r.blockedHits > 0) {
+            String why = r.blockReason.isEmpty() ? "proteção do jogo" : r.blockReason;
+            chat(EnumChatFormatting.YELLOW + "" + r.blockedHits + " tentativa(s) não causaram dano (" + why
+                    + "). Não foram contadas como golpes recebidos.");
+        }
+        if (local && r.delay.getMillis() <= 500) {
+            chat(EnumChatFormatting.YELLOW + "Com delay de 0,50 s ou menos, a invulnerabilidade temporária do "
+                    + "Minecraft (0,5 s) reduz ou anula golpes.");
+        }
+        if (!local) {
+            chat(EnumChatFormatting.YELLOW + "Modo monitor: nenhum dano foi aplicado pelo mod; o dano mostrado "
+                    + "é o real recebido (qualquer fonte).");
+        }
+        chat(EnumChatFormatting.AQUA + "Remoção automática de itens: desativada.");
+    }
+
+    private void chat(String text) {
+        Minecraft.getMinecraft().thePlayer.addChatMessage(new ChatComponentText(text));
     }
 
     /** No single-player, qualquer tela que pausa o jogo também congela o relógio do teste. */
@@ -245,13 +289,5 @@ public class ResistanceTestManager {
     /** 0..1 até o próximo golpe, ou -1 se não se aplica (monitor/parado). */
     public float getNextHitProgress() {
         return isActive() && applier != null && applier.appliesDamage() ? timer.getProgress() : -1f;
-    }
-
-    public boolean hasPendingResults() { return pendingResults != null; }
-
-    public SessionResult consumePendingResults() {
-        SessionResult r = pendingResults;
-        pendingResults = null;
-        return r;
     }
 }

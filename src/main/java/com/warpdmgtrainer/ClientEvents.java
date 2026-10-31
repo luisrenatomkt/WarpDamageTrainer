@@ -2,7 +2,6 @@ package com.warpdmgtrainer;
 
 import com.warpdmgtrainer.config.ConfigManager;
 import com.warpdmgtrainer.core.ResistanceTestManager;
-import com.warpdmgtrainer.gui.ResultsGui;
 import com.warpdmgtrainer.gui.TrainerGui;
 import net.minecraft.client.Minecraft;
 import net.minecraft.util.ChatComponentText;
@@ -51,9 +50,6 @@ public class ClientEvents {
         if (openRequested && mc.currentScreen == null) {
             openRequested = false;
             mc.displayGuiScreen(new TrainerGui(manager, config));
-        } else if (manager.hasPendingResults() && mc.thePlayer.getHealth() > 0.0F
-                && (mc.currentScreen == null || mc.currentScreen instanceof TrainerGui)) {
-            mc.displayGuiScreen(new ResultsGui(manager, config, manager.consumePendingResults()));
         }
     }
 

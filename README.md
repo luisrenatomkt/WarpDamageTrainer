@@ -5,7 +5,7 @@ Mod **cliente** para **Minecraft 1.8.9 + Forge 11.15.1.2318** que cria um teste 
 | Item | Valor |
 |---|---|
 | Nome / ID | Warp Damage Trainer / `warpdmgtrainer` |
-| Versão | 1.1.0 |
+| Versão | 1.1.1 |
 | Minecraft / Loader | 1.8.9 / Forge `1.8.9-11.15.1.2318-1.8.9` |
 | Build | ForgeGradle 2.1-SNAPSHOT, Gradle **2.14.1**, Java **8**, mappings `stable_22` |
 
@@ -33,7 +33,7 @@ Enquanto um teste está ativo (rodando ou pausado) **no modo LOCAL (single-playe
 
 **Temporizador.** Contagem regressiva por `System.nanoTime()`, consultada a cada tick e a cada frame, sem threads. Nunca dispara mais de um golpe por consulta: se o jogo travar, os intervalos perdidos são apenas contados ("intervalos perdidos por lag"). O relógio congela quando o jogo está pausado (ESC no single-player) ou o teste está em pausa. O primeiro golpe ocorre após um intervalo completo. O golpe executa no próximo tick do servidor (até ~50 ms de atraso, uniforme em todos os golpes).
 
-**Delays ≤ 0,50 s:** a invulnerabilidade temporária do Minecraft reduz ou anula os golpes. O mod informa isso na tela de resultados em vez de contar golpes fictícios.
+**Delays ≤ 0,50 s:** a invulnerabilidade temporária do Minecraft reduz ou anula os golpes. O mod informa isso nos resultados (no chat) em vez de contar golpes fictícios.
 
 **Melhor tempo:** considera testes encerrados por morte ou manualmente (interrupções por fechar o mundo não contam). Vale para qualquer combinação de dano/delay; o histórico guarda as configurações de cada teste.
 
@@ -41,7 +41,7 @@ Enquanto um teste está ativo (rodando ou pausado) **no modo LOCAL (single-playe
 
 * **K** abre o painel (configurável em Controles → "Warp Damage Trainer"). **L** liga/desliga o HUD.
 * Painel: escolha dano (1 a 5 corações) e delay (2,00 a 0,25 s), **INICIAR TESTE**, **PAUSAR/RETOMAR**, **ENCERRAR**, **RESETAR ESTATÍSTICAS**, HUD ativado/desativado. Dano/delay só mudam com o teste parado.
-* Ao morrer ou encerrar, a tela de resultados abre (após o respawn, se morreu).
+* Ao morrer, encerrar ou finalizar o teste, os resultados completos aparecem no **chat** (não há mais tela de resultados).
 * Comando `/warpdmg [abrir|iniciar|pausar|encerrar|resetar|hud|status|dano <corações>|delay <s ou ms>]`.
 * Configurações e estatísticas: `config/warpdmgtrainer.cfg` (formato Forge).
 
@@ -60,7 +60,7 @@ Enquanto um teste está ativo (rodando ou pausado) **no modo LOCAL (single-playe
 3. O push na branch `main` (ou `master`) dispara o workflow `.github/workflows/build.yml`. Também dá para rodar manualmente: aba **Actions → Build Warp Damage Trainer → Run workflow**.
 4. Ao terminar, abra a execução e baixe o artefato **WarpDamageTrainer-1.1.0** (um .zip contendo o `.jar`).
 
-**Caminho do .jar:** `build/libs/warpdmgtrainer-1.1.0.jar` (no runner e no build local). No GitHub: página da execução → seção *Artifacts*.
+**Caminho do .jar:** `build/libs/warpdmgtrainer-1.1.1.jar` (no runner e no build local). No GitHub: página da execução → seção *Artifacts*.
 
 O workflow usa Java 8 (Temurin), baixa o **Gradle 2.14.1** (o Gradle do runner é novo demais para ForgeGradle 2.x), roda `gradle setupCiWorkspace build` e falha se a compilação falhar ou se o `.jar` não existir.
 
@@ -71,7 +71,7 @@ O workflow usa Java 8 (Temurin), baixa o **Gradle 2.14.1** (o Gradle do runner �
 ## Instalar no Minecraft
 
 1. Instale o Minecraft Forge **1.8.9 – 11.15.1.2318** (instalador oficial) e abra o jogo uma vez com o perfil Forge.
-2. Copie `warpdmgtrainer-1.1.0.jar` para `.minecraft/mods/`.
+2. Copie `warpdmgtrainer-1.1.1.jar` para `.minecraft/mods/`.
 3. Abra o Minecraft com o perfil Forge 1.8.9. O mod é só de cliente e não precisa estar no servidor.
 
 ## Estrutura
@@ -86,7 +86,7 @@ src/main/java/com/warpdmgtrainer/
   core/ResistanceTestManager  máquina de estados do teste
   core/StatsCollector, SessionResult
   damage/                     DamageApplier (local / monitor / ponto de extensão)
-  gui/TrainerGui, ResultsGui  telas nativas (GuiScreen)
+  gui/TrainerGui              painel nativo (GuiScreen)
   hud/TrainerHud              HUD
   command/TrainerCommand      /warpdmg
   model/, util/
