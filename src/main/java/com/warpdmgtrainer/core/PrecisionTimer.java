@@ -7,6 +7,9 @@ package com.warpdmgtrainer.core;
  * Não usa threads.
  */
 public class PrecisionTimer {
+    /** Atraso máximo (2 ticks) tratado como frame normal; acima disso é travamento. */
+    private static final long MAX_CATCHUP_NANOS = 100000000L;
+
     private long intervalNanos = 1000000000L;
     private long remainingNanos = intervalNanos;
     private long skipped;
@@ -17,17 +20,31 @@ public class PrecisionTimer {
         this.skipped = 0L;
     }
 
-    /** Avança o relógio. Retorna true se UM golpe deve ser disparado agora. */
+    /** Compatibilidade: true se pelo menos um golpe está devido agora. */
     public boolean advance(long deltaNanos) {
+        return advanceCount(deltaNanos) > 0;
+    }
+
+    /**
+     * Avança o relógio e retorna quantos golpes devem ser disparados agora.
+     * Em frames normais (atraso de até MAX_CATCHUP_NANOS) retorna todos os golpes devidos, o que é
+     * necessário para delays menores que a duração de um frame (ex.: 10 ms a 60 FPS).
+     * Em travamentos maiores que isso retorna no máximo 1 e conta o restante como "skipped",
+     * sem rajada de golpes acumulados.
+     */
+    public int advanceCount(long deltaNanos) {
         if (deltaNanos < 0) deltaNanos = 0;
         remainingNanos -= deltaNanos;
-        if (remainingNanos > 0) return false;
-        remainingNanos += intervalNanos;
-        if (remainingNanos <= 0) {
-            skipped += (-remainingNanos) / intervalNanos + 1L;
+        if (remainingNanos > 0) return 0;
+        long overdue = -remainingNanos;
+        long due = overdue / intervalNanos + 1L;
+        if (overdue > MAX_CATCHUP_NANOS) {
+            skipped += due - 1L;
             remainingNanos = intervalNanos;
+            return 1;
         }
-        return true;
+        remainingNanos += due * intervalNanos;
+        return (int) due;
     }
 
     public long getSkipped() { return skipped; }

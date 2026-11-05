@@ -24,11 +24,11 @@ public class LogicSelfTest {
         check("fromHearts(6) = null", DamageLevel.fromHearts(6) == null);
 
         // 2. tabela de delay
-        int[] ms = {2000,1750,1250,1000,750,500,250,100};
-        ok = DelayOption.values().length == 8;
-        for (int i = 0; i < 8; i++) ok &= DelayOption.values()[i].getMillis() == ms[i]
+        int[] ms = {2000,1750,1250,1000,750,500,250,100,50,40,30,20,10};
+        ok = DelayOption.values().length == 13;
+        for (int i = 0; i < 13; i++) ok &= DelayOption.values()[i].getMillis() == ms[i]
                 && DelayOption.values()[i].getNanos() == ms[i] * 1000000L;
-        check("Tabela de delay (8 opções, ms e ns)", ok);
+        check("Tabela de delay (13 opções, ms e ns)", ok);
 
         // 3. timer: cadência normal a 60 FPS por 10 s com delay 500 ms => 20 golpes
         PrecisionTimer t = new PrecisionTimer();
@@ -62,6 +62,37 @@ public class LogicSelfTest {
         t.reset(DelayOption.D100.getNanos());
         boolean b1 = t.advance(1000000000L), b2 = t.advance(1000000L);
         check("Lag de 1 s com delay 0,10: 1 golpe só, 9 intervalos perdidos (obtido " + t.getSkipped() + ")", b1 && !b2 && t.getSkipped() == 9);
+
+        // 5c. delays de 0,05 a 0,01 s
+        String[] desc = {"0,05 s (50 ms)","0,04 s (40 ms)","0,03 s (30 ms)","0,02 s (20 ms)","0,01 s (10 ms)"};
+        boolean okd = true;
+        for (int i = 0; i < 5; i++) okd &= DelayOption.fromIndex(8 + i).getDescription().equals(desc[i])
+                && DelayOption.fromMillis(50 - 10 * i) == DelayOption.fromIndex(8 + i);
+        check("Novos delays 0,05/0,04/0,03/0,02/0,01 com descrição e ms corretos", okd);
+        check("Índices salvos 0..7 continuam iguais (0,10 = 7)", DelayOption.fromIndex(7) == DelayOption.D100);
+        // 10 ms com ticks de 50 ms: 5 golpes por passo, 500 em 5 s
+        t.reset(DelayOption.D10.getNanos());
+        int tot = 0; for (int i = 0; i < 100; i++) tot += t.advanceCount(50000000L);
+        check("0,01 s a 50ms/passo x100 => 500 golpes (obtido " + tot + ")", tot == 500 && t.getSkipped() == 0);
+        // 10 ms com frames de 60 FPS por 10 s: cadência mantida (~1000), sem intervalos perdidos
+        t.reset(DelayOption.D10.getNanos());
+        tot = 0; long acc = 0; long fr = 16666667L;
+        while (acc < 10000000000L) { tot += t.advanceCount(fr); acc += fr; }
+        check("0,01 s a 60 FPS por 10 s => 995..1000 golpes (obtido " + tot + ")", tot >= 995 && tot <= 1000 && t.getSkipped() == 0);
+        // 0,05 s a 60 FPS por 10 s => ~200
+        t.reset(DelayOption.D50.getNanos());
+        tot = 0; acc = 0;
+        while (acc < 10000000000L) { tot += t.advanceCount(fr); acc += fr; }
+        check("0,05 s a 60 FPS por 10 s => 198..200 golpes (obtido " + tot + ")", tot >= 198 && tot <= 200);
+        // travamento de 1 s com 10 ms: sem rajada
+        t.reset(DelayOption.D10.getNanos());
+        int burst = t.advanceCount(1000000000L);
+        check("Travamento de 1 s a 0,01 s: 1 golpe só, 99 perdidos (obtido " + burst + "/" + t.getSkipped() + ")",
+                burst == 1 && t.getSkipped() == 99);
+        // frame lento de 80 ms (abaixo do limite de 100 ms) mantém a cadência
+        t.reset(DelayOption.D10.getNanos());
+        int slow = t.advanceCount(80000000L);
+        check("Frame de 80 ms a 0,01 s: 8 golpes (cadência mantida, obtido " + slow + ")", slow == 8 && t.getSkipped() == 0);
 
         // 6. estatísticas: dano configurado x registrado
         StatsCollector s = new StatsCollector();

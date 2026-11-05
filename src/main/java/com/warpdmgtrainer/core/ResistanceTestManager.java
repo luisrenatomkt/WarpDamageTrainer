@@ -4,6 +4,7 @@ import com.warpdmgtrainer.config.ConfigManager;
 import com.warpdmgtrainer.config.PersistenceManager;
 import com.warpdmgtrainer.damage.DamageApplier;
 import com.warpdmgtrainer.damage.DamageApplierFactory;
+import com.warpdmgtrainer.damage.LocalDamageApplier;
 import com.warpdmgtrainer.model.DamageLevel;
 import com.warpdmgtrainer.model.DelayOption;
 import com.warpdmgtrainer.model.EndReason;
@@ -59,6 +60,7 @@ public class ResistanceTestManager {
         }
         applier = DamageApplierFactory.select(mc);
         sessionId++;
+        LocalDamageApplier.setActiveSession(sessionId);
         results.clear();
         DelayOption delay = config.getDelayOption();
         stats.begin(config.getDamageLevel(), delay, applier.getModeCode());
@@ -157,10 +159,13 @@ public class ResistanceTestManager {
         }
 
         if (applier.appliesDamage()) {
-            if (timer.advance(dt)) {
+            int due = timer.advanceCount(dt);
+            if (due > 0) {
                 float amount = config.getDamageLevel().getHealthPoints();
-                stats.registerAttempt(amount);
-                applier.apply(mc, amount, sessionId, results);
+                for (int i = 0; i < due; i++) {
+                    stats.registerAttempt(amount);
+                    applier.apply(mc, amount, sessionId, results);
+                }
             }
         } else if (fromTick) {
             float cur = p.getHealth() + p.getAbsorptionAmount();
@@ -183,6 +188,7 @@ public class ResistanceTestManager {
 
     private void finish(EndReason reason) {
         itemGuard.disarm(); // drops voltam ao normal imediatamente
+        LocalDamageApplier.setActiveSession(-1); // golpes ainda na fila do servidor são descartados
         long ms = elapsedNanos / 1000000L;
         SessionResult r = stats.finish(reason, ms, timer.getSkipped());
         persistence.save(stats);
@@ -230,6 +236,10 @@ public class ResistanceTestManager {
         if (local && r.delay.getMillis() <= 500) {
             chat(EnumChatFormatting.YELLOW + "Com delay de 0,50 s ou menos, a invulnerabilidade temporária do "
                     + "Minecraft (0,5 s) reduz ou anula golpes.");
+        }
+        if (local && r.delay.getMillis() < 50) {
+            chat(EnumChatFormatting.YELLOW + "O Minecraft processa 20 ticks por segundo (50 ms): com delay menor "
+                    + "que 0,05 s vários golpes caem no mesmo tick e só o primeiro causa dano.");
         }
         if (!local) {
             chat(EnumChatFormatting.YELLOW + "Modo monitor: nenhum dano foi aplicado pelo mod; o dano mostrado "

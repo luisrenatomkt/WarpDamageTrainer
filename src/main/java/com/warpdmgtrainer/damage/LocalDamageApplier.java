@@ -19,6 +19,11 @@ public class LocalDamageApplier implements DamageApplier {
     /** Fonte de dano própria (mensagem de morte em lang). Não ignora armadura. */
     public static final DamageSource TRAINER_SOURCE = new DamageSource("warpdmgtrainer") {};
 
+    /** Sessão de teste atual; golpes agendados de sessões encerradas (ex.: após a morte) são descartados. */
+    private static volatile int activeSession = -1;
+
+    public static void setActiveSession(int sessionId) { activeSession = sessionId; }
+
     @Override public String getModeCode() { return "LOCAL"; }
     @Override public String getModeName() { return "LOCAL (servidor integrado)"; }
     @Override public boolean appliesDamage() { return true; }
@@ -34,6 +39,7 @@ public class LocalDamageApplier implements DamageApplier {
         server.addScheduledTask(new Runnable() {
             @Override
             public void run() {
+                if (sessionId != activeSession) return; // teste já terminou: não bate no jogador renascido
                 try {
                     sink.add(performHit(server, id, amount, sessionId));
                 } catch (RuntimeException e) {

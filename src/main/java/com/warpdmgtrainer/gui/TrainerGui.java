@@ -53,7 +53,7 @@ public class TrainerGui extends GuiScreen {
         }
         DelayOption[] dos = DelayOption.values();
         for (int i = 0; i < dos.length; i++) {
-            delayBtns[i] = new GuiButton(ID_DELAY + i, x0 + i * 38, panelY + 78, 37, 18, dos[i].getShortLabel());
+            delayBtns[i] = new GuiButton(ID_DELAY + i, x0 + i * 24, panelY + 78, 23, 18, dos[i].getShortLabel());
             buttonList.add(delayBtns[i]);
         }
         int cy = panelY + 114;

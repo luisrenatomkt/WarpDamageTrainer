@@ -72,9 +72,9 @@ public class TrainerCommand extends CommandBase {
             }
         } else if (sub.equals("delay") && args.length >= 2) {
             Double v = parse(args[1]);
-            DelayOption opt = v == null ? null : DelayOption.fromMillis((int) Math.round(v < 100 ? v * 1000 : v));
+            DelayOption opt = v == null ? null : DelayOption.fromMillis((int) Math.round(v <= 2.0 ? v * 1000 : v));
             if (opt == null) {
-                reply(sender, "Valores válidos: 2, 1.75, 1.25, 1, 0.75, 0.5, 0.25, 0.1 (segundos) ou 2000, 1750, ..., 100 (ms).");
+                reply(sender, "Valores válidos: 2, 1.75, 1.25, 1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.04, 0.03, 0.02, 0.01 (segundos) ou 2000, ..., 100, 50, 40, 30, 20, 10 (ms).");
             } else if (!manager.setDelayOption(opt)) {
                 reply(sender, "Não é possível alterar durante um teste.");
             } else {
