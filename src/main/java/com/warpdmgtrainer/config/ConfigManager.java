@@ -22,7 +22,7 @@ public class ConfigManager {
         damageProp = config.get(CAT_GENERAL, "nivelDano", 2,
                 "Indice do nivel de dano (0 = 1 coracao ... 8 = 5 coracoes)", 0, DamageLevel.values().length - 1);
         delayProp = config.get(CAT_GENERAL, "indiceDelay", 3,
-                "Indice do delay (0 = 2,00s, 1 = 1,75s, 2 = 1,25s, 3 = 1,00s, 4 = 0,75s, 5 = 0,50s, 6 = 0,25s)",
+                "Indice do delay (0 = 2,00s, 1 = 1,75s, 2 = 1,25s, 3 = 1,00s, 4 = 0,75s, 5 = 0,50s, 6 = 0,25s, 7 = 0,10s)",
                 0, DelayOption.values().length - 1);
         hudProp = config.get(CAT_GENERAL, "hudAtivado", true, "Exibir o HUD durante o teste");
         config.save();

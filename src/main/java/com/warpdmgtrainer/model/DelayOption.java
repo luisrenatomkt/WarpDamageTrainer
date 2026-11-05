@@ -3,7 +3,7 @@ package com.warpdmgtrainer.model;
 /** Intervalos entre golpes, em milissegundos. */
 public enum DelayOption {
     D2000(2000, "2,00"), D1750(1750, "1,75"), D1250(1250, "1,25"), D1000(1000, "1,00"),
-    D750(750, "0,75"), D500(500, "0,50"), D250(250, "0,25");
+    D750(750, "0,75"), D500(500, "0,50"), D250(250, "0,25"), D100(100, "0,10");
 
     private final int millis;
     private final String seconds;

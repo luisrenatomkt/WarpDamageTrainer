@@ -24,11 +24,11 @@ public class LogicSelfTest {
         check("fromHearts(6) = null", DamageLevel.fromHearts(6) == null);
 
         // 2. tabela de delay
-        int[] ms = {2000,1750,1250,1000,750,500,250};
-        ok = DelayOption.values().length == 7;
-        for (int i = 0; i < 7; i++) ok &= DelayOption.values()[i].getMillis() == ms[i]
+        int[] ms = {2000,1750,1250,1000,750,500,250,100};
+        ok = DelayOption.values().length == 8;
+        for (int i = 0; i < 8; i++) ok &= DelayOption.values()[i].getMillis() == ms[i]
                 && DelayOption.values()[i].getNanos() == ms[i] * 1000000L;
-        check("Tabela de delay (7 opções, ms e ns)", ok);
+        check("Tabela de delay (8 opções, ms e ns)", ok);
 
         // 3. timer: cadência normal a 60 FPS por 10 s com delay 500 ms => 20 golpes
         PrecisionTimer t = new PrecisionTimer();
@@ -51,6 +51,17 @@ public class LogicSelfTest {
         t.reset(250000000L);
         int c = 0; for (int i = 1; i <= 100; i++) if (t.advance(50000000L)) c++;
         check("Timer 250ms a 50ms/passo, 100 passos => 20 golpes (obtido " + c + ")", c == 20);
+
+        // 5b. delay 0,10 s: 2 ticks de 50 ms => 50 golpes em 100 passos; sem rajada em lag
+        t.reset(DelayOption.D100.getNanos());
+        c = 0; for (int i = 1; i <= 100; i++) if (t.advance(50000000L)) c++;
+        check("Timer 100ms a 50ms/passo, 100 passos => 50 golpes (obtido " + c + ")", c == 50);
+        check("DelayOption.fromMillis(100) = 0,10 s", DelayOption.fromMillis(100) == DelayOption.D100
+                && DelayOption.D100.getDescription().equals("0,10 s (100 ms)"));
+        check("Índice salvo 6 (0,25 s) continua valendo após adicionar 0,10", DelayOption.fromIndex(6) == DelayOption.D250);
+        t.reset(DelayOption.D100.getNanos());
+        boolean b1 = t.advance(1000000000L), b2 = t.advance(1000000L);
+        check("Lag de 1 s com delay 0,10: 1 golpe só, 9 intervalos perdidos (obtido " + t.getSkipped() + ")", b1 && !b2 && t.getSkipped() == 9);
 
         // 6. estatísticas: dano configurado x registrado
         StatsCollector s = new StatsCollector();
